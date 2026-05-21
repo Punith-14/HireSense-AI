@@ -11,10 +11,22 @@ load_dotenv()
 
 @lru_cache(maxsize=1)
 def connect_mongodb():
-    db_name = os.getenv("MONGODB_DB_NAME", "hiresenseai")
-    uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017/hiresenseai")
-    alias = os.getenv("MONGODB_ALIAS", "default")
-    timeout_ms = int(os.getenv("MONGODB_SERVER_SELECTION_TIMEOUT_MS", "3000"))
+    db_name = (
+        os.getenv("MONGO_DB_NAME")
+        or os.getenv("MONGODB_DB_NAME")
+        or "hiresense_ai"
+    )
+    uri = (
+        os.getenv("MONGO_URI")
+        or os.getenv("MONGODB_URI")
+        or f"mongodb://localhost:27017/{db_name}"
+    )
+    alias = os.getenv("MONGO_ALIAS") or os.getenv("MONGODB_ALIAS") or "default"
+    timeout_ms = int(
+        os.getenv("MONGO_SERVER_SELECTION_TIMEOUT_MS")
+        or os.getenv("MONGODB_SERVER_SELECTION_TIMEOUT_MS")
+        or "3000"
+    )
 
     try:
         existing = get_connection(alias=alias)
@@ -31,6 +43,7 @@ def connect_mongodb():
         uuidRepresentation="standard",
     )
     connection.admin.command("ping")
+    _ensure_indexes()
     return connection
 
 
@@ -42,3 +55,10 @@ def assert_mongodb_ready():
         return False, f"MongoDB unavailable: {exc}"
     except Exception as exc:
         return False, f"MongoDB connection failed: {exc}"
+
+
+def _ensure_indexes():
+    from utils.mongo_documents import Interview, InterviewSession, Report, UserProfile
+
+    for document in (UserProfile, InterviewSession, Interview, Report):
+        document.ensure_indexes()

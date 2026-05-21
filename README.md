@@ -4,7 +4,7 @@ Production-grade AI-powered adaptive mock interview intelligence platform.
 
 ## Current Backend
 
-The backend lives in `backend/` and uses Django 5, Django REST Framework, MongoDB, MongoEngine, OpenCV, MediaPipe, FER, TensorFlow, SpeechRecognition, and PyAudio.
+The backend lives in `backend/` and uses Django 5, Django REST Framework, MongoDB, MongoEngine, OpenCV, MediaPipe, FER, TensorFlow, xAI Grok API, local Hugging Face (transformers/torch), Vosk, PyAudio, and sounddevice.
 
 ## Local Commands
 
@@ -26,6 +26,60 @@ Live webcam CV demo:
 ```powershell
 .\venv\Scripts\python.exe backend\manage.py run_live_cv
 ```
+
+## Frontend Integration Guide
+
+Base URL (local): `http://127.0.0.1:8000`
+
+Core flow:
+1. **Start interview** → render first question.
+2. **Capture answer** (text or audio) → post to `/api/interview/answer/` with optional speech/vision metrics.
+3. **Render next question** until done.
+4. **Generate report** with `/api/interview/report/`.
+
+Endpoints (JSON unless noted):
+
+- **POST** `/api/interview/start/`
+  - Body: `{ "role": "Python Developer", "mode": "technical", "user_email": "demo@local.test", "full_name": "Demo User" }`
+  - Response: `{ "session_id", "interview_id", "role", "mode", "question": { "question", "difficulty", "category", "expected_skills" } }`
+
+- **POST** `/api/interview/answer/`
+  - JSON body: `{ "session_id", "answer_text", "speech_metrics": { "filler_count", "pause_count", "duration_seconds", "words_per_minute" }, "vision_metrics": { "attention", "eye_contact_score", "emotion_score" } }`
+  - Multipart alternative: `audio_file` plus `session_id`; returns `422` with `transcription_unavailable` if offline model isn’t configured.
+  - Response: `{ "session_id", "evaluation": { "technical_score", "communication_score", "confidence_score", "hesitation_score", "next_difficulty" }, "next_question": { ... } }`
+
+- **POST** `/api/interview/evaluate/` (no interview progression)
+  - Body: `{ "session_id", "answer_text", "speech_metrics": {...}, "vision_metrics": {...} }`
+
+- **GET** `/api/interview/report/?session_id=...`
+  - Response: `{ "report": { "final_analysis", "recommendations", "confidence_score", "behavior_score", "communication_score", "technical_score", "final_score", "hiring_recommendation" } }`
+
+- **POST** `/api/speech/transcribe/`
+  - JSON body with `text` + `duration_seconds`, or multipart with `audio_file`.
+  - Response includes `status`, `provider`, `transcript`, and `metrics`.
+
+- **POST** `/api/vision/analyze/` (multipart)
+  - Form field: `image_file` (JPEG/PNG).
+  - Response includes `{ "status": "ok", "vision": { "dominant_emotion", "emotion_score", "attention" }, "confidence": { ... } }`.
+
+Frontend guidance:
+- Prefer **text answers** while offline speech models are not installed; switch to audio once `VOSK_MODEL_PATH` is set.
+- Send **vision metrics** from client camera if you capture frames client-side; otherwise call `/api/vision/analyze/` periodically and attach results to `/answer/`.
+- Handle `422` from `/answer/` by falling back to typed answers.
+
+## Feature Map (How it Works)
+
+| Feature | How it works |
+| --- | --- |
+| Adaptive questions | LLM generates role-aware questions using difficulty + prior Q/A; deterministic fallback if no provider. |
+| Answer evaluation | Heuristics + speech/vision metrics produce technical, communication, confidence, and hesitation scores. |
+| Confidence scoring | Combines eye contact, emotion, filler/pauses, and speech speed into confidence/nervousness. |
+| Offline speech | Vosk local model transcribes WAV; optional HTTP endpoint fallback if enabled. |
+| CV analysis | OpenCV + MediaPipe + FER detect emotion and attention from frames. |
+| Reports | LLM summarizes transcript + scores into a final report stored in MongoDB. |
+| Admin ops | Django admin for auth + custom Mongo-backed pages for users/sessions/interviews/reports. |
+| Persistence | MongoDB collections with enforced indexes to prevent duplicates and ensure restart safety. |
+| Realtime loop | `run_realtime_interview` captures webcam + microphone locally without frontend. |
 
 ## Adaptive Interview API
 
@@ -63,6 +117,12 @@ Backend-only local interview loop:
 
 ```powershell
 .\venv\Scripts\python.exe backend\manage.py run_local_interview --role "Python Developer" --turns 3
+```
+
+Realtime interview loop (webcam + microphone, offline-first):
+
+```powershell
+.\venv\Scripts\python.exe backend\manage.py run_realtime_interview --role "Python Developer" --turns 3
 ```
 
 ## QA Test Suite

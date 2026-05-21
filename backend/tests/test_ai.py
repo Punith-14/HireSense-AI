@@ -67,14 +67,14 @@ def test_interview_engine_fallback_latency(mongo_ready, qa_email):
     assert elapsed < 3.0
 
 
-def test_llm_service_defaults_to_requested_groq_model(monkeypatch):
+def test_llm_service_defaults_to_requested_grok_model(monkeypatch):
     from services.ai.llm_service import LLMService
 
     monkeypatch.delenv("LLM_PROVIDER", raising=False)
-    monkeypatch.delenv("GROQ_MODEL", raising=False)
+    monkeypatch.delenv("XAI_MODEL", raising=False)
     service = LLMService()
     status = service.provider_status()
 
-    assert status["provider"] == "groq"
-    assert status["groq_model"] == "llama3-8b-8192"
+    assert status["provider"] == "auto"
+    assert status["grok_model"] == "grok-2-latest"
     assert status["fallback_enabled"] is True

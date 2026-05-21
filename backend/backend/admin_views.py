@@ -12,7 +12,7 @@ def _mongo_unavailable_context():
         return None
     return {
         "db_error": message,
-        "db_fix": "Start MongoDB Server on localhost:27017 or set MONGODB_URI in .env.",
+        "db_fix": "Start MongoDB Server on localhost:27017 or set MONGO_URI in .env.",
     }
 
 

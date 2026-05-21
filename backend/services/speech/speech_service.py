@@ -2,7 +2,7 @@ import os
 import tempfile
 
 from services.speech.offline_recognizer import OfflineRecognizerUnavailable, VoskOfflineRecognizer
-from services.speech.online_recognizer import OnlineRecognizerUnavailable, SpeechRecognitionOnlineRecognizer
+from services.speech.online_recognizer import HttpOnlineRecognizer, OnlineRecognizerUnavailable
 from services.speech.pause_detector import detect_pauses_wav
 from services.speech.speech_metrics import calculate_speech_metrics
 
@@ -14,7 +14,7 @@ class SpeechServiceError(RuntimeError):
 class SpeechService:
     def __init__(self):
         self.offline = VoskOfflineRecognizer()
-        self.online = SpeechRecognitionOnlineRecognizer()
+        self.online = HttpOnlineRecognizer()
 
     def transcribe_uploaded_file(self, uploaded_file):
         path = self._save_upload(uploaded_file)

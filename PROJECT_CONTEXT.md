@@ -37,12 +37,13 @@ HireSenseAI now has a Django 5 backend scaffold under `backend/`, MongoEngine do
 - Answer submission supports `answer_text` or uploaded `audio_file`.
 - Automated QA suite added under `backend/tests/` with API, DB, AI, CV, speech, integration, and performance coverage.
 - Live hardware validation passed with webcam and microphone probes using `RUN_LIVE_HARDWARE_TESTS=1`.
-- Offline-first speech service added under `backend/services/speech/` with Vosk support, optional online fallback, filler detection, pause detection, and speech metrics.
+- Offline-first speech service added under `backend/services/speech/` with Vosk support, optional HTTP online fallback, filler detection, pause detection, and speech metrics.
 - Standalone backend APIs added:
   - `POST /api/speech/transcribe/`
   - `POST /api/vision/analyze/`
-- Groq `llama3-8b-8192` is now the default primary adaptive interview model through the centralized LLM abstraction layer, with Hugging Face fallback support.
+- xAI Grok is the primary adaptive interview model through the centralized LLM abstraction layer, with local Hugging Face fallback support.
 - Deployment readiness files added: `render.yaml`, `Procfile`, WhiteNoise static serving, and `collectstatic` validation.
+- Celery-ready task dispatch and realtime event bus scaffolding added under `backend/services/runtime/`.
 
 ## Module Overview
 
@@ -53,3 +54,4 @@ HireSenseAI now has a Django 5 backend scaffold under `backend/`, MongoEngine do
 - Report Engine: creates final structured analysis and recommendation.
 - QA Harness: pytest validates dependency imports, MongoDB persistence, adaptive interview APIs, cached CV services, speech analysis, admin pages, and performance budgets.
 - Backend-only local operation: `python backend/manage.py run_local_interview` drives an adaptive terminal interview without frontend dependencies.
+- Realtime local loop: `python backend/manage.py run_realtime_interview` records microphone audio, captures webcam frames, and runs adaptive evaluation.

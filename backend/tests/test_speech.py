@@ -16,10 +16,10 @@ def test_speech_text_metrics():
     assert metrics["words_per_minute"] > 0
 
 
-def test_speech_recognition_dependency_installed():
-    import speech_recognition as sr
+def test_sounddevice_dependency_installed():
+    import sounddevice as sd
 
-    assert sr.__version__ == "3.16.1"
+    assert sd.__version__ == "0.5.5"
 
 
 def test_vosk_dependency_installed():
@@ -52,7 +52,7 @@ def test_microphone_device_probe():
     if os.getenv("RUN_LIVE_HARDWARE_TESTS") != "1":
         pytest.skip("Set RUN_LIVE_HARDWARE_TESTS=1 to run real microphone validation.")
 
-    import speech_recognition as sr
+    import sounddevice as sd
 
-    microphones = sr.Microphone.list_microphone_names()
-    assert microphones, "No microphone devices detected"
+    devices = [device for device in sd.query_devices() if device.get("max_input_channels", 0) > 0]
+    assert devices, "No microphone input devices detected"

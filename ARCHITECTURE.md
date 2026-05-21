@@ -43,7 +43,9 @@ Implemented interview endpoints:
 
 `backend/services/ai/` contains the core intelligence engine:
 
-- `llm_service.py`: cached HTTP session, Groq/Hugging Face provider abstraction, retries, timeouts, structured JSON parsing, local fallback.
+- `llm_service.py`: cached HTTP session, xAI Grok + local Hugging Face provider abstraction, retries, timeouts, structured JSON parsing, local fallback.
+- `grok_provider.py`: xAI Grok chat completion provider with retry/timeout handling.
+- `hf_provider.py`: local Hugging Face model loader and generation helper.
 - `prompt_engine.py`: centralized prompt templates and role skill inference.
 - `evaluation_engine.py`: technical, communication, confidence, and hesitation scoring from answer text, speech metrics, and vision metrics.
 - `adaptive_engine.py`: difficulty and pressure-level decisions.
@@ -58,12 +60,12 @@ Vision processing loads FER and MediaPipe through cached accessors so TensorFlow
 
 Hosted deployment cannot access a user's webcam directly. Production architecture should receive browser-captured frames through upload endpoints first, then WebSocket streaming when needed.
 
-LLM calls use free-tier-friendly providers when keys are configured. Groq is primary:
+LLM calls use a primary xAI Grok provider with a local Hugging Face fallback:
 
-- `GROQ_API_KEY` with `GROQ_MODEL=llama3-8b-8192`
-- `HF_API_KEY` or `HUGGINGFACE_API_KEY` with `HF_MODEL=microsoft/Phi-3-mini-4k-instruct`
+- `XAI_API_KEY` with `XAI_MODEL=grok-2-latest`
+- `HF_LOCAL_ENABLED=True` with `HF_MODEL=microsoft/Phi-3-mini-4k-instruct` (or another local model)
 
-If no API key is configured, the backend uses deterministic local fallback generation and scoring so live development remains functional.
+If the provider is unavailable or disabled, the backend uses deterministic local fallback generation and scoring so live development remains functional.
 
 ## Speech Architecture
 
@@ -71,7 +73,7 @@ If no API key is configured, the backend uses deterministic local fallback gener
 
 - `speech_service.py`: orchestrates recognizer selection and never hard-fails because the internet is unavailable.
 - `offline_recognizer.py`: Vosk integration using `VOSK_MODEL_PATH` for local models.
-- `online_recognizer.py`: optional SpeechRecognition/Google fallback only when `ALLOW_ONLINE_SPEECH_RECOGNITION=True`.
+- `online_recognizer.py`: optional HTTP fallback only when `ALLOW_ONLINE_SPEECH_RECOGNITION=True` and `ONLINE_SPEECH_ENDPOINT` is set.
 - `filler_detector.py`: filler word detection.
 - `pause_detector.py`: WAV pause detection using local audio analysis.
 - `speech_metrics.py`: word count, WPM, hesitation, filler, pause, and communication metrics.
@@ -80,7 +82,7 @@ Provider priority is offline Vosk, then optional online recognition, then gracef
 
 ## Runtime Architecture
 
-`backend/services/runtime/task_executor.py` provides a cached `ThreadPoolExecutor` for future async/WebSocket/Celery-style inference isolation. The current APIs remain synchronous for simplicity, but ML/model clients are cached and the runtime boundary is ready for queue or streaming upgrades.
+`backend/services/runtime/task_executor.py` provides a cached `ThreadPoolExecutor` for inference isolation. `task_queue.py` adds a Celery-ready dispatch layer, and `realtime_bus.py` defines event payloads for future WebSocket streaming. The current APIs remain synchronous for simplicity, but ML/model clients are cached and the runtime boundary is ready for queue or streaming upgrades.
 
 ## CV Processing Pipeline
 
@@ -93,7 +95,7 @@ Provider priority is offline Vosk, then optional online recognition, then gracef
 
 ## Deployment Flow
 
-Render runs Django with environment variables. MongoDB Atlas free tier supplies `MONGODB_URI`. Static files are collected with `collectstatic`. Domain documents remain in MongoDB.
+Render runs Django with environment variables. MongoDB Atlas free tier supplies `MONGO_URI`. Static files are collected with `collectstatic`. Domain documents remain in MongoDB.
 
 ## QA Architecture
 
@@ -103,8 +105,7 @@ Automated tests live under `backend/tests/`:
 - `test_db.py`: MongoDB health, unique email enforcement, persistence after reconnect, index presence.
 - `test_ai.py`: adaptive decisions, answer scoring, fallback interview latency.
 - `test_cv.py`: OpenCV/MediaPipe/TensorFlow/FER imports, cached model clients, blank-frame processing, hardware webcam probe.
-- `test_speech.py`: text speech metrics, SpeechRecognition dependency, hardware microphone probe.
-- `test_speech.py`: Vosk dependency, offline-unavailable fallback behavior, text speech metrics, microphone probe.
+- `test_speech.py`: text speech metrics, sounddevice dependency, Vosk dependency, offline-unavailable fallback behavior, microphone probe.
 - `test_integration.py`: AI + speech metrics + vision metrics + report persistence, admin page stability.
 - `test_performance.py`: health endpoint latency, MongoDB query latency, evaluation latency.
 

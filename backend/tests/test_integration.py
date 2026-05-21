@@ -79,3 +79,9 @@ def test_local_interview_management_command_is_registered():
     from django.core.management import get_commands
 
     assert "run_local_interview" in get_commands()
+
+
+def test_realtime_interview_management_command_is_registered():
+    from django.core.management import get_commands
+
+    assert "run_realtime_interview" in get_commands()

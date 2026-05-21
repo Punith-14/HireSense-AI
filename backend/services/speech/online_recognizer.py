@@ -1,41 +1,43 @@
 import os
 
+import requests
+
 
 class OnlineRecognizerUnavailable(RuntimeError):
     pass
 
 
-class SpeechRecognitionOnlineRecognizer:
-    provider = "speech_recognition_google"
+class HttpOnlineRecognizer:
+    provider = "http_speech"
 
-    def __init__(self, enabled=None):
+    def __init__(self, endpoint=None, enabled=None, timeout=None):
         if enabled is None:
             enabled = os.getenv("ALLOW_ONLINE_SPEECH_RECOGNITION", "False").lower() == "true"
         self.enabled = enabled
+        self.endpoint = endpoint or os.getenv("ONLINE_SPEECH_ENDPOINT")
+        self.timeout = float(timeout or os.getenv("ONLINE_SPEECH_TIMEOUT_SECONDS", "25"))
 
     def available(self):
-        if not self.enabled:
-            return False
-        try:
-            import speech_recognition  # noqa: F401
-        except ImportError:
-            return False
-        return True
+        return bool(self.enabled and self.endpoint)
 
     def transcribe_audio_file(self, path):
         if not self.available():
-            raise OnlineRecognizerUnavailable("Online speech recognition is disabled or unavailable.")
+            raise OnlineRecognizerUnavailable("Online speech recognition is disabled or not configured.")
 
-        import speech_recognition as sr
-
-        recognizer = sr.Recognizer()
         try:
-            with sr.AudioFile(path) as source:
-                audio = recognizer.record(source)
-            return recognizer.recognize_google(audio)
-        except sr.UnknownValueError as exc:
-            raise OnlineRecognizerUnavailable("Could not understand uploaded audio.") from exc
-        except sr.RequestError as exc:
+            with open(path, "rb") as audio:
+                response = requests.post(
+                    self.endpoint,
+                    files={"audio_file": audio},
+                    timeout=self.timeout,
+                )
+            response.raise_for_status()
+            payload = response.json()
+        except requests.RequestException as exc:
             raise OnlineRecognizerUnavailable(f"Online speech recognition failed: {exc}") from exc
-        except ValueError as exc:
-            raise OnlineRecognizerUnavailable("Unsupported audio format for online recognition.") from exc
+
+        transcript = payload.get("transcript") or payload.get("text") or payload.get("result") or ""
+        transcript = str(transcript).strip()
+        if not transcript:
+            raise OnlineRecognizerUnavailable("Online speech recognition returned an empty transcript.")
+        return transcript
