@@ -1,0 +1,19 @@
+{% extends "admin/hiresense/base.html" %}
+{% block hiresense_content %}
+<form method="get" class="module">
+  <label>Role <input type="search" name="role" value="{{ role }}"></label>
+  <label>Emotion <input type="search" name="emotion" value="{{ emotion }}"></label>
+  <label>Minimum score <input type="number" step="0.1" name="min_score" value="{{ min_score }}"></label>
+  <button type="submit">Filter</button>
+</form>
+<table>
+  <thead><tr><th>Role</th><th>Emotion</th><th>Confidence</th><th>Behavior</th><th>Communication</th><th>Technical</th><th>Final</th><th>Recommendation</th><th>Created</th></tr></thead>
+  <tbody>
+  {% for report in reports %}
+    <tr><td>{{ report.role }}</td><td>{{ report.dominant_emotion }}</td><td>{{ report.confidence_score }}</td><td>{{ report.behavior_score }}</td><td>{{ report.communication_score }}</td><td>{{ report.technical_score }}</td><td>{{ report.final_score }}</td><td>{{ report.hiring_recommendation }}</td><td>{{ report.created_at }}</td></tr>
+  {% empty %}
+    <tr><td colspan="9">No reports found.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: hiresenseai-backend
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt && python backend/manage.py collectstatic --noinput && python backend/manage.py migrate
+    startCommand: gunicorn backend.wsgi:application --chdir backend
+    envVars:
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_ALLOWED_HOSTS
+        sync: false
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB_NAME
+        value: hiresenseai
+      - key: LLM_PROVIDER
+        value: groq
+      - key: GROQ_MODEL
+        value: llama3-8b-8192
+      - key: GROQ_API_KEY
+        sync: false
+      - key: HF_API_KEY
+        sync: false
+      - key: ALLOW_ONLINE_SPEECH_RECOGNITION
+        value: "False"

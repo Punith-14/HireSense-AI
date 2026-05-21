@@ -1,0 +1,21 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div class="module">
+  <h2>HireSenseAI Admin</h2>
+  <p>
+    <a href="{% url 'hiresense_admin_users' %}">Users</a> |
+    <a href="{% url 'hiresense_admin_sessions' %}">Sessions</a> |
+    <a href="{% url 'hiresense_admin_interviews' %}">Interviews</a> |
+    <a href="{% url 'hiresense_admin_reports' %}">Reports</a>
+  </p>
+</div>
+{% if db_error %}
+<div class="messagelist">
+  <div class="warning">
+    <strong>MongoDB unavailable.</strong> {{ db_error }}
+    <br>{{ db_fix }}
+  </div>
+</div>
+{% endif %}
+{% block hiresense_content %}{% endblock %}
+{% endblock %}

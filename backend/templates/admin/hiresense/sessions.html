@@ -1,0 +1,18 @@
+{% extends "admin/hiresense/base.html" %}
+{% block hiresense_content %}
+<form method="get" class="module">
+  <label>Role <input type="search" name="role" value="{{ role }}"></label>
+  <label>Status <input type="search" name="status" value="{{ status }}"></label>
+  <button type="submit">Filter</button>
+</form>
+<table>
+  <thead><tr><th>Role</th><th>Mode</th><th>Difficulty</th><th>Status</th><th>Created</th><th>Updated</th></tr></thead>
+  <tbody>
+  {% for session in sessions %}
+    <tr><td>{{ session.role }}</td><td>{{ session.mode }}</td><td>{{ session.difficulty }}</td><td>{{ session.status }}</td><td>{{ session.created_at }}</td><td>{{ session.updated_at }}</td></tr>
+  {% empty %}
+    <tr><td colspan="6">No sessions found.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

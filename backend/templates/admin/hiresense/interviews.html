@@ -1,0 +1,18 @@
+{% extends "admin/hiresense/base.html" %}
+{% block hiresense_content %}
+<form method="get" class="module">
+  <label>Role <input type="search" name="role" value="{{ role }}"></label>
+  <label>Minimum final score <input type="number" step="0.1" name="min_score" value="{{ min_score }}"></label>
+  <button type="submit">Filter</button>
+</form>
+<table>
+  <thead><tr><th>Role</th><th>Mode</th><th>Final Score</th><th>Questions</th><th>Created</th><th>Updated</th></tr></thead>
+  <tbody>
+  {% for interview in interviews %}
+    <tr><td>{{ interview.role }}</td><td>{{ interview.mode }}</td><td>{{ interview.scores.final }}</td><td>{{ interview.questions|length }}</td><td>{{ interview.created_at }}</td><td>{{ interview.updated_at }}</td></tr>
+  {% empty %}
+    <tr><td colspan="6">No interviews found.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
