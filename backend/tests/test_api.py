@@ -101,3 +101,28 @@ def test_vision_analyze_blank_image_api(api_client):
     assert payload["status"] == "ok"
     assert "vision" in payload
     assert "confidence" in payload
+
+
+def test_vision_frame_upload_requires_payload(api_client):
+    response = api_client.post("/api/vision/frame/", {}, format="json")
+
+    assert response.status_code == 400
+
+
+def test_vision_frame_upload_base64(api_client):
+    import base64
+    import cv2
+    import numpy as np
+
+    frame = np.zeros((120, 160, 3), dtype=np.uint8)
+    ok, encoded = cv2.imencode(".jpg", frame)
+    assert ok
+    image_base64 = base64.b64encode(encoded.tobytes()).decode("ascii")
+
+    response = api_client.post("/api/vision/frame/", {"image_base64": image_base64}, format="json")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert "vision" in payload
+    assert "confidence" in payload

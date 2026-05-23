@@ -58,13 +58,17 @@ Endpoints (JSON unless noted):
   - JSON body with `text` + `duration_seconds`, or multipart with `audio_file`.
   - Response includes `status`, `provider`, `transcript`, and `metrics`.
 
-- **POST** `/api/vision/analyze/` (multipart)
-  - Form field: `image_file` (JPEG/PNG).
+- **POST** `/api/vision/analyze/` (multipart or JSON)
+  - Provide `image_file` (JPEG/PNG) or `image_base64`.
+  - Response includes `{ "status": "ok", "vision": { "dominant_emotion", "emotion_score", "attention" }, "confidence": { ... } }`.
+
+- **POST** `/api/vision/frame/` (hosted frame upload, multipart or JSON)
+  - Provide `image_file` (JPEG/PNG) or `image_base64`.
   - Response includes `{ "status": "ok", "vision": { "dominant_emotion", "emotion_score", "attention" }, "confidence": { ... } }`.
 
 Frontend guidance:
 - Prefer **text answers** while offline speech models are not installed; switch to audio once `VOSK_MODEL_PATH` is set.
-- Send **vision metrics** from client camera if you capture frames client-side; otherwise call `/api/vision/analyze/` periodically and attach results to `/answer/`.
+- Send **vision metrics** from client camera if you capture frames client-side; otherwise call `/api/vision/analyze/` or `/api/vision/frame/` and attach results to `/answer/`.
 - Handle `422` from `/answer/` by falling back to typed answers.
 
 ## Feature Map (How it Works)

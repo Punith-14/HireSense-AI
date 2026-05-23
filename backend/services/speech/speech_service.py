@@ -12,9 +12,11 @@ class SpeechServiceError(RuntimeError):
 
 
 class SpeechService:
-    def __init__(self):
+
+    def __init__(self, allow_online=True):
         self.offline = VoskOfflineRecognizer()
-        self.online = HttpOnlineRecognizer()
+        self.allow_online = allow_online
+        self.online = HttpOnlineRecognizer() if allow_online else None
 
     def transcribe_uploaded_file(self, uploaded_file):
         path = self._save_upload(uploaded_file)
@@ -39,7 +41,7 @@ class SpeechService:
             except OfflineRecognizerUnavailable as exc:
                 errors.append(str(exc))
 
-        if not transcript and self.online.available():
+        if not transcript and self.allow_online and self.online and self.online.available():
             try:
                 transcript = self.online.transcribe_audio_file(path)
                 provider = self.online.provider

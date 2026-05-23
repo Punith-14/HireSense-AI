@@ -1,5 +1,17 @@
 # HireSenseAI Features Log
 
+## 2026-05-22
+
+### Added
+
+- Added hosted frame upload endpoint `POST /api/vision/frame/` with `image_base64` support.
+- Added base64 support for `/api/vision/analyze/` to accept JSON payloads.
+- Added automated API tests covering frame upload base64 payloads.
+
+### Documentation
+
+- Updated README vision API guidance for base64 and hosted frame uploads.
+
 ## 2026-05-21
 
 ### Added
@@ -76,6 +88,4 @@
 
 - Browser UI for live interview flow.
 - Client-side webcam frame streaming into `vision_metrics`.
-- Frame upload endpoint for hosted deployments.
-- Automated frame-upload API tests after that endpoint is built.
 - Download and configure a local Vosk model directory for real offline transcription, then set `VOSK_MODEL_PATH`.
