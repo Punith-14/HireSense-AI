@@ -84,6 +84,8 @@ class InterviewEngine:
                 "final_score": report.final_score,
                 "hiring_recommendation": report.hiring_recommendation,
             },
+            "transcript": interview.transcript or [],
+            "questions": interview.questions or []
         }
 
     def _generate_question(self, session, interview):

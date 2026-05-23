@@ -9,7 +9,7 @@ import FeedbackCard from "../components/FeedbackCard.jsx";
 import RecommendationCard from "../components/RecommendationCard.jsx";
 import ScoreCard from "../components/ScoreCard.jsx";
 import { useInterview } from "../context/InterviewContext.jsx";
-import { getInterviewReport } from "../services/interviewApi.js";
+import { getInterviewReport, getInterviewHistory } from "../services/interviewApi.js";
 
 const fade = (delay = 0) => ({
   initial:    { opacity: 0, y: 16 },
@@ -37,16 +37,32 @@ export default function Dashboard() {
   const sessionId = searchParams.get("session_id");
 
   const [report, setReport] = useState(null);
+  const [transcript, setTranscript] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    setLoading(true);
     if (sessionId) {
-      setLoading(true);
       getInterviewReport(sessionId).then(data => {
         if (data.report) setReport(data.report);
+        if (data.transcript) setTranscript(data.transcript);
       }).catch(err => {
         console.error("Failed to fetch report", err);
       }).finally(() => setLoading(false));
+    } else {
+      getInterviewHistory().then(data => {
+        if (data.history && data.history.length > 0) {
+          getInterviewReport(data.history[0].session_id).then(rData => {
+            if (rData.report) setReport(rData.report);
+            if (rData.transcript) setTranscript(rData.transcript);
+          }).catch(console.error).finally(() => setLoading(false));
+        } else {
+          setLoading(false);
+        }
+      }).catch(err => {
+        console.error("Failed to fetch history", err);
+        setLoading(false);
+      });
     }
   }, [sessionId]);
 
@@ -73,17 +89,24 @@ export default function Dashboard() {
   ];
 
   /* ── Timeline ── */
-  const timeline = hasHistory
-    ? interview.scores.map((score, i) => ({ question: `Q${i + 1}`, score }))
-    : [];
+  const timeline = transcript && transcript.length > 0
+    ? transcript.map((t, i) => ({ question: `Q${i + 1}`, score: t.score || 75 }))
+    : hasHistory
+      ? interview.scores.map((score, i) => ({ question: `Q${i + 1}`, score }))
+      : [];
 
   /* ── Emotion Timeline ── */
-  const emotionTimeline = interview.questionHistory && interview.questionHistory.length
-    ? interview.questionHistory.map((q, i) => ({
+  const emotionTimeline = transcript && transcript.length > 0
+    ? transcript.map((t, i) => ({
         question: `Q${i + 1}`,
-        emotion: Math.round((q.emotion_score || 0) * 100)
+        emotion: Math.round(((t.vision_metrics && t.vision_metrics.emotion_score) || 0) * 100)
       }))
-    : [];
+    : interview.questionHistory && interview.questionHistory.length
+      ? interview.questionHistory.map((q, i) => ({
+          question: `Q${i + 1}`,
+          emotion: Math.round((q.emotion_score || 0) * 100)
+        }))
+      : [];
 
   /* ── Feedback from real data or demo ── */
   const strengths     = report ? report.final_analysis?.strengths || [] : (hasHistory ? ["Strong OOP understanding", "Clear communication style"] : ["Complete an interview to see strengths."]);
@@ -95,7 +118,7 @@ export default function Dashboard() {
       <motion.section className="section compact" {...fade(0)}>
         <div className="eyebrow">Welcome, {userName}</div>
         <h1>Interview Performance Summary</h1>
-        {hasHistory ? (
+        {report || hasHistory ? (
           <p>Your session results, skills radar, and AI-generated feedback.</p>
         ) : (
           <p>You haven't completed any interviews yet. Head to the Interview page to get started!</p>
