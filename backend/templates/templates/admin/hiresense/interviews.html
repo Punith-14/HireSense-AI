@@ -1,0 +1,54 @@
+{% extends "admin/hiresense/base.html" %}
+{% block hiresense_content %}
+<form method="get" class="module">
+  <label>Role <input type="search" name="role" value="{{ role }}"></label>
+  <label>Minimum final score <input type="number" step="0.1" name="min_score" value="{{ min_score }}"></label>
+  <button type="submit">Filter</button>
+</form>
+<table>
+  <thead>
+    <tr>
+      <th>Role</th>
+      <th>Mode</th>
+      <th>Scores</th>
+      <th>Questions</th>
+      <th>Transcript</th>
+      <th>Created</th>
+      <th>Updated</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for interview in interviews %}
+    <tr>
+      <td>{{ interview.role }}</td>
+      <td>{{ interview.mode }}</td>
+      <td>
+        Final: {{ interview.scores.final }}<br>
+        Technical: {{ interview.scores.technical }}<br>
+        Communication: {{ interview.scores.communication }}<br>
+        Confidence: {{ interview.scores.confidence }}<br>
+        Hesitation: {{ interview.scores.hesitation }}
+      </td>
+      <td>{{ interview.questions|length }}</td>
+      <td>
+        <details>
+          <summary>View</summary>
+          {% for item in interview.transcript %}
+            <div><strong>Q:</strong> {{ item.question }}</div>
+            <div><strong>A:</strong> {{ item.answer_text }}</div>
+            <div><strong>Summary:</strong> {{ item.answer_summary }}</div>
+            <hr>
+          {% empty %}
+            <div>No transcript entries.</div>
+          {% endfor %}
+        </details>
+      </td>
+      <td>{{ interview.created_at }}</td>
+      <td>{{ interview.updated_at }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="7">No interviews found.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,18 @@
+{
+  "scripts": {
+    "dev": "C:\\Progra~1\\nodejs\\node.exe ./node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5173",
+    "build": "C:\\Progra~1\\nodejs\\node.exe ./node_modules/vite/bin/vite.js build",
+    "preview": "C:\\Progra~1\\nodejs\\node.exe ./node_modules/vite/bin/vite.js preview"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "axios": "^1.16.1",
+    "framer-motion": "^12.39.0",
+    "lucide-react": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-router-dom": "^7.15.1",
+    "recharts": "^3.8.1",
+    "vite": "latest"
+  }
+}

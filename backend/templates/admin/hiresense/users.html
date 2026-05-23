@@ -1,0 +1,17 @@
+{% extends "admin/hiresense/base.html" %}
+{% block hiresense_content %}
+<form method="get" class="module">
+  <label>Search email <input type="search" name="q" value="{{ search }}"></label>
+  <button type="submit">Filter</button>
+</form>
+<table>
+  <thead><tr><th>Email</th><th>Name</th><th>Provider</th><th>Created</th><th>Updated</th></tr></thead>
+  <tbody>
+  {% for user in users %}
+    <tr><td>{{ user.email }}</td><td>{{ user.full_name }}</td><td>{{ user.auth_provider }}</td><td>{{ user.created_at }}</td><td>{{ user.updated_at }}</td></tr>
+  {% empty %}
+    <tr><td colspan="5">No users found.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
