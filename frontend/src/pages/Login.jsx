@@ -24,7 +24,8 @@ export default function Login() {
     
     try {
       const data = await loginUser(email, password);
-      // Store user info in localStorage for simple persistence
+      // Persist the auth token and user info for the session.
+      if (data.token) localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
       window.dispatchEvent(new Event("auth_change"));
       navigate("/dashboard");

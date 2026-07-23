@@ -79,7 +79,8 @@ class Interview(TimestampedDocument):
         "collection": "interviews",
         "indexes": [
             "user",
-            "session",
+            # Exactly one interview record per session (get_interview relies on this).
+            {"fields": ["session"], "unique": True},
             "role",
             "mode",
             "created_at",
@@ -104,11 +105,13 @@ class Report(TimestampedDocument):
     meta = {
         "collection": "reports",
         "indexes": [
-            "user",
-            "interview",
+            # Dashboard's core query: one user's tests, newest first.
+            {"fields": ["user", "-created_at"]},
+            # Exactly one report per interview (finish_report upserts on this).
+            {"fields": ["interview"], "unique": True},
             "role",
+            "mode",
             "dominant_emotion",
-            "created_at",
             "-final_score",
         ],
     }
@@ -116,6 +119,7 @@ class Report(TimestampedDocument):
     user = ReferenceField(UserProfile)
     interview = ReferenceField(Interview)
     role = StringField(required=True)
+    mode = StringField(default="technical")
     final_analysis = DictField(default=dict)
     recommendations = ListField(StringField(), default=list)
     confidence_score = FloatField(default=0)

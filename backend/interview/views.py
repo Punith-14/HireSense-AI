@@ -98,6 +98,13 @@ def _core_start_interview(request, forced_mode=None):
     user_email = (request.data.get("user_email") or "").strip() or None
     full_name = (request.data.get("full_name") or "").strip() or None
 
+    # Prefer the authenticated user over any client-supplied identity, so a
+    # session is always tied to the real, token-verified account.
+    auth_user = getattr(request, "user", None)
+    if auth_user is not None and getattr(auth_user, "is_authenticated", False):
+        user_email = getattr(auth_user, "email", None) or user_email
+        full_name = getattr(auth_user, "full_name", None) or full_name
+
     if not role:
         return Response({"error": "role is required"}, status=status.HTTP_400_BAD_REQUEST)
     if mode not in {"technical", "hr", "mixed", "behavioral"}:
@@ -191,16 +198,31 @@ def interview_report(request):
 
 @api_view(["GET"])
 def interview_history(request):
-    from utils.mongo_documents import Report
-    reports = Report.objects().order_by("-created_at")[:50]
+    from utils.mongo_documents import Report, UserProfile
+
+    # Scope history to the authenticated user only (never leak other users' reports).
+    auth_user = getattr(request, "user", None)
+    profile = None
+    if auth_user is not None and getattr(auth_user, "is_authenticated", False):
+        profile = UserProfile.objects(email=auth_user.email).first()
+    if profile is None:
+        return Response({"history": []})
+
+    reports = Report.objects(user=profile).order_by("-created_at")[:50]
     data = []
     for r in reports:
+        session = r.interview.session if r.interview and r.interview.session else None
         data.append({
-            "session_id": str(r.interview.session.id) if r.interview and r.interview.session else None,
+            "session_id": str(session.id) if session else None,
             "date": r.created_at.isoformat() if r.created_at else None,
-            "agent_type": r.role.capitalize(),
+            "role": r.role,
+            "mode": r.mode,
+            "agent_type": (r.mode.capitalize() if getattr(r, "mode", None) else (r.role or "").capitalize()),
             "score": r.final_score,
-            "recommendation": r.hiring_recommendation
+            "technical_score": r.technical_score,
+            "communication_score": r.communication_score,
+            "confidence_score": r.confidence_score,
+            "recommendation": r.hiring_recommendation,
         })
     return Response({"history": data})
 

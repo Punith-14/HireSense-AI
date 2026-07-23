@@ -3,9 +3,14 @@ import hashlib
 from services.ai import prompt_engine
 from services.ai.memory_engine import MemoryEngine
 from services.ai.llm_service import get_llm_service
+from services.confidence_engine import ConfidenceEngine
+from interview.agents.debate_agent import generate_debate_question
 from interview.services.interview_router import generate_question_by_type, evaluate_answer_by_type
 
 class InterviewEngine:
+    # Number of answered questions after which the interview is considered complete.
+    MAX_QUESTIONS = 5
+
     def __init__(self):
         self.llm = get_llm_service()
         self.memory = MemoryEngine()
@@ -32,6 +37,13 @@ class InterviewEngine:
         evaluation_payload = evaluate_answer_by_type(session.mode, current_question.get("question"), answer_text)
         evaluation = evaluation_payload.get("result", {})
         evaluation["next_difficulty"] = evaluation_payload.get("next_difficulty", session.difficulty)
+
+        # Fuse real delivery signals (pauses, speech speed, filler words, eye
+        # contact) into a measured confidence score, replacing the LLM's guess.
+        signals = self._confidence_signals(speech_metrics, vision_metrics)
+        if signals:
+            evaluation.update(signals)
+
         self.memory.append_answer(
             interview,
             {
@@ -45,12 +57,20 @@ class InterviewEngine:
         )
         self.memory.update_after_evaluation(session, interview, evaluation)
 
-        next_question = self._generate_follow_up_or_next(session, interview, answer_text, current_question, evaluation)
-        self.memory.append_question(interview, next_question)
+        answered = len(interview.transcript or [])
+        is_complete = answered >= self.MAX_QUESTIONS
+
+        next_question = None
+        if not is_complete:
+            next_question = self._generate_follow_up_or_next(session, interview, answer_text, current_question, evaluation)
+            self.memory.append_question(interview, next_question)
+
         return {
             "session_id": str(session.id),
             "evaluation": evaluation,
             "next_question": next_question,
+            "is_complete": is_complete,
+            "questions_answered": answered,
         }
 
     def evaluate_only(self, session_id, answer_text, speech_metrics=None, vision_metrics=None):
@@ -99,16 +119,47 @@ class InterviewEngine:
             "interviewer_intent": ""
         }
 
+    def _confidence_signals(self, speech_metrics, vision_metrics):
+        """Compute a measured confidence score from real delivery signals.
+
+        Returns None when there is nothing to measure (e.g. a typed answer with
+        no webcam), so we never fabricate a confidence number from thin air.
+        """
+        speech = speech_metrics or {}
+        vision = vision_metrics or {}
+        has_speech = bool(speech.get("word_count") or speech.get("duration_seconds"))
+        has_vision = (vision.get("attention") or "").lower() in ("direct", "partial", "away")
+        if not (has_speech or has_vision):
+            return None
+
+        result = ConfidenceEngine().calculate(speech, vision)
+        return {
+            "confidence_score": result["confidence_score"],
+            "eye_contact_score": result["eye_contact_score"],
+            "nervousness_score": result["nervousness_score"],
+        }
+
     def _generate_follow_up_or_next(self, session, interview, answer_text, current_question, evaluation):
-        if evaluation.get("followup_question"):
-            return {
-                "question": evaluation.get("followup_question"),
-                "difficulty": session.difficulty,
-                "category": session.mode,
-                "expected_skills": [],
-                "follow_up_enabled": False,
-                "interviewer_intent": "Follow up"
-            }
+        # DEBATE MODE: after a normal question, challenge the candidate's own
+        # answer once to create realistic pressure. After that debate turn, move
+        # on to a fresh adaptive question so we don't loop forever.
+        already_challenged = (current_question.get("category") or "").endswith("debate")
+        if not already_challenged and (answer_text or "").strip():
+            debate_q = generate_debate_question(
+                current_question.get("question", ""), answer_text, session.role
+            )
+            if not debate_q:
+                debate_q = evaluation.get("followup_question")  # graceful fallback
+            if debate_q:
+                return {
+                    "question": debate_q,
+                    "difficulty": session.difficulty,
+                    "category": f"{session.mode}_debate",
+                    "expected_skills": [],
+                    "follow_up_enabled": False,
+                    "interviewer_intent": "Challenge and pressure-test the candidate's answer.",
+                }
+
         session.difficulty = evaluation.get("next_difficulty", session.difficulty)
         return self._generate_question(session, interview)
 

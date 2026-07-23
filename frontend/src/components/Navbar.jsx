@@ -29,6 +29,7 @@ export default function Navbar() {
   }, []);
 
   const handleLogout = () => {
+    localStorage.removeItem("token");
     localStorage.removeItem("user");
     window.dispatchEvent(new Event("auth_change"));
     window.location.href = "/"; // Refresh and go home

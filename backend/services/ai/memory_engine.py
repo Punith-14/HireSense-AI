@@ -69,19 +69,7 @@ class MemoryEngine:
         session.difficulty = evaluation.get("next_difficulty", session.difficulty)
         session.save()
 
-        scores = dict(interview.scores or {})
-        scores.update(
-            {
-                "technical": evaluation.get("technical_score", scores.get("technical", 0)),
-                "communication": evaluation.get("communication_score", scores.get("communication", 0)),
-                "confidence": evaluation.get("confidence_score", scores.get("confidence", 0)),
-                "teamwork": evaluation.get("teamwork_score", scores.get("teamwork", 0)),
-                "leadership": evaluation.get("leadership_score", scores.get("leadership", 0)),
-                "hesitation": evaluation.get("hesitation_score", scores.get("hesitation", 0)),
-                "final": self._final_score(evaluation),
-            }
-        )
-        interview.scores = scores
+        interview.scores = self._aggregate_scores(interview)
         interview.ai_feedback = evaluation
         interview.save()
 
@@ -106,13 +94,14 @@ class MemoryEngine:
             new=True,
             set__user=interview.user,
             set__role=interview.role,
+            set__mode=interview.mode,
             set__final_analysis=report_payload,
             set__recommendations=report_payload.get("recommendations", []),
-            set__confidence_score=scores.get("confidence", 80),
-            set__behavior_score=scores.get("teamwork", 85),
-            set__communication_score=scores.get("communication", 75),
-            set__technical_score=scores.get("technical", 80),
-            set__final_score=scores.get("final", 80),
+            set__confidence_score=scores.get("confidence", 0),
+            set__behavior_score=scores.get("teamwork", 0),
+            set__communication_score=scores.get("communication", 0),
+            set__technical_score=scores.get("technical", 0),
+            set__final_score=scores.get("final", 0),
             set__dominant_emotion=report_payload.get("dominant_emotion"),
             set__hiring_recommendation=report_payload.get("hiring_recommendation"),
         )
@@ -124,10 +113,30 @@ class MemoryEngine:
             return None
         return transcript[-1].get("answer_summary") or transcript[-1].get("answer_text", "")[:220]
 
-    def _final_score(self, evaluation):
-        base = max([
-            evaluation.get("technical_score", 0),
-            evaluation.get("teamwork_score", 0),
-            evaluation.get("communication_score", 0)
-        ])
-        return round(base, 1) if base > 0 else 75.0
+    # Metrics that count toward the overall final score (hesitation is diagnostic, not additive).
+    SCORE_METRICS = ("technical", "communication", "confidence", "teamwork", "leadership")
+
+    def _aggregate_scores(self, interview):
+        """Average each metric across every answered question.
+
+        Metrics that were never produced (e.g. teamwork in a purely technical
+        interview) stay at 0 rather than being back-filled with fabricated
+        defaults. The final score is the mean of the metrics that were actually
+        measured, so a failed/empty evaluation yields 0 instead of a flattering
+        placeholder.
+        """
+        buckets = {m: [] for m in (*self.SCORE_METRICS, "hesitation")}
+        for entry in (interview.transcript or []):
+            evaluation = entry.get("evaluation") or {}
+            for metric in buckets:
+                value = evaluation.get(f"{metric}_score")
+                if isinstance(value, (int, float)):
+                    buckets[metric].append(value)
+
+        scores = {
+            metric: round(sum(values) / len(values), 1) if values else 0
+            for metric, values in buckets.items()
+        }
+        measured = [scores[m] for m in self.SCORE_METRICS if buckets[m]]
+        scores["final"] = round(sum(measured) / len(measured), 1) if measured else 0
+        return scores

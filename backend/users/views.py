@@ -1,10 +1,14 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import AllowAny
 from django.contrib.auth.hashers import make_password, check_password
 from utils.mongo_documents import UserProfile
+from .auth import create_token
 
 @api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
 def register_user(request):
     email = request.data.get("email", "").strip().lower()
     full_name = request.data.get("name", "").strip()
@@ -26,6 +30,7 @@ def register_user(request):
 
     return Response({
         "status": "success",
+        "token": create_token(user),
         "user": {
             "email": user.email,
             "full_name": user.full_name
@@ -33,6 +38,8 @@ def register_user(request):
     })
 
 @api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
 def login_user(request):
     email = request.data.get("email", "").strip().lower()
     password = request.data.get("password", "")
@@ -50,6 +57,7 @@ def login_user(request):
 
     return Response({
         "status": "success",
+        "token": create_token(user),
         "user": {
             "email": user.email,
             "full_name": user.full_name

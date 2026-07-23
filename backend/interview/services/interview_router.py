@@ -71,7 +71,7 @@ def evaluate_answer_by_type(interview_type, question, answer):
             answer
         )
         response["next_difficulty"] = get_next_difficulty(
-            result["technical_score"]
+            result.get("technical_score", 0)
         )
 
     response["result"] = result

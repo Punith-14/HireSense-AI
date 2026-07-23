@@ -56,7 +56,13 @@ def evaluate_behavioral_answer(question, answer):
         match = re.search(r'\{.*\}', content, re.DOTALL)
         if match:
             return json.loads(match.group(0))
-        return {"error": "Failed to parse JSON from LLM"}
+        return {
+            "teamwork_score": 0,
+            "leadership_score": 0,
+            "communication_score": 0,
+            "feedback": "Could not parse the evaluation. Please try again.",
+            "followup_question": "Can you elaborate on your answer?"
+        }
     except Exception as e:
         print(f"Behavioral Evaluation Error: {str(e)}")
         return {

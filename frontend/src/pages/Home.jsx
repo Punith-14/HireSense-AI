@@ -6,7 +6,7 @@ import {
 import { Link } from "react-router-dom";
 
 const features = [
-  { title: "Technical AI Interviews",   icon: BrainCircuit,  desc: "Java, DSA, system design, OOP questions powered by Gemini." },
+  { title: "Technical AI Interviews",   icon: BrainCircuit,  desc: "Java, DSA, system design, and OOP questions powered by AI." },
   { title: "HR Interview Simulation",   icon: MessageCircle, desc: "Personality, motivation, and communication skill evaluation." },
   { title: "Behavioral Analysis",       icon: ShieldCheck,   desc: "STAR-based teamwork and leadership question generation." },
   { title: "Adaptive Difficulty",       icon: Gauge,         desc: "Questions get harder or easier based on your performance." },
